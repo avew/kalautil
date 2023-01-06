@@ -7,12 +7,10 @@ import com.itextpdf.text.pdf.*;
 import com.sun.istack.Nullable;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
@@ -40,53 +38,52 @@ public class PdfUtil {
         }
     }
 
-    public static File attachImage(
-            InputStream in,
+    public static void attachImage(
+            File src,
+            @Nullable File dest,
             InputStream attach,
-            File out,
             @Nullable String passPdf,
             double signLx,
             double signLy,
             int pageStamp) throws IOException, com.itextpdf.text.DocumentException {
 
-        if (in == null)
-            throw new RuntimeException("File in is null");
-        if (out == null)
-            throw new RuntimeException("File out is null");
+        if (src == null)
+            throw new RuntimeException("File src is null");
         if (pageStamp == 0)
             throw new RuntimeException("Pdf page cannot be zero");
-
-        checkPdf(in, passPdf);
-
+        checkPdf(FileUtils.openInputStream(src), passPdf);
         byte[] bytes = IOUtils.toByteArray(attach);
-        attach(bytes, (float) signLx, (float) signLy, passPdf, in, out, pageStamp);
-
-        return out;
+        attach(bytes, (float) signLx, (float) signLy, passPdf, src, dest, pageStamp);
     }
 
     public static File attachBase64Image(
-            InputStream in,
+            File src,
+            @Nullable File dest,
             String base64Image,
-            File out,
             @Nullable String passPdf,
             double signLx,
             double signLy,
             int pageStamp) throws IOException, com.itextpdf.text.DocumentException {
 
-        if (in == null)
-            throw new RuntimeException("File in is null");
-        if (out == null)
-            throw new RuntimeException("File out is null");
+        if (src == null)
+            throw new RuntimeException("File src is null");
         if (pageStamp == 0)
             throw new RuntimeException("Pdf page cannot be zero");
 
-        checkPdf(in, passPdf);
+        checkPdf(FileUtils.openInputStream(src), passPdf);
         byte[] bytes = Base64.decodeBase64(base64Image.getBytes());
-        attach(bytes, (float) signLx, (float) signLy, passPdf, in, out, pageStamp);
-        return out;
+        attach(bytes, (float) signLx, (float) signLy, passPdf, src, null, pageStamp);
+        return src;
     }
 
-    private static void attach(byte[] bytes, float signLx, float signLy, String passPdf, InputStream in, File out, int pageStamp) throws IOException, DocumentException {
+    private static void attach(byte[] bytes,
+                               float signLx,
+                               float signLy,
+                               String passPdf,
+                               File src,
+                               File dest,
+                               int pageStamp) throws IOException, DocumentException {
+        FileInputStream in = FileUtils.openInputStream(src);
         Image image = Image.getInstance(bytes);
         image.setAbsolutePosition(signLx, signLy);
         PdfReader reader;
@@ -95,7 +92,13 @@ public class PdfUtil {
         } else {
             reader = new PdfReader(in);
         }
-        PdfStamper stamper = new PdfStamper(reader, new FileOutputStream(out));
+        PdfStamper stamper;
+        if (dest == null) {
+            stamper = new PdfStamper(reader, new FileOutputStream(src));
+        } else {
+            stamper = new PdfStamper(reader, new FileOutputStream(dest));
+        }
+
         if (isNotEmpty(passPdf)) {
             stamper.setEncryption(passPdf.getBytes(), passPdf.getBytes(), PdfWriter.ALLOW_PRINTING, PdfWriter.ENCRYPTION_AES_128);
         }
