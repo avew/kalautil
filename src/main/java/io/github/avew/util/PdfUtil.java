@@ -13,6 +13,7 @@ import org.apache.commons.io.IOUtils;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 
+import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 
 @Slf4j
@@ -40,18 +41,16 @@ public class PdfUtil {
 
     public static void attachImage(
             File src,
-            @Nullable File dest,
             InputStream attach,
             @Nullable String passPdf,
             double signLx,
             double signLy,
-            int pageStamp) throws IOException, com.itextpdf.text.DocumentException {
+            int pageStamp) throws IOException, DocumentException {
 
         if (src == null)
             throw new RuntimeException("File src is null");
         if (pageStamp == 0)
             throw new RuntimeException("Pdf page cannot be zero");
-        checkPdf(FileUtils.openInputStream(src), passPdf);
         byte[] bytes = IOUtils.toByteArray(attach);
         attach(bytes, (float) signLx, (float) signLy, passPdf, src, pageStamp);
     }
@@ -60,37 +59,57 @@ public class PdfUtil {
             InputStream src,
             @Nullable File dest,
             InputStream attach,
-            @Nullable String passPdf,
+            String passPdf,
             double signLx,
             double signLy,
-            int pageStamp) throws IOException, com.itextpdf.text.DocumentException {
+            int pageStamp) throws IOException, DocumentException {
 
         if (src == null)
             throw new RuntimeException("File src is null");
+        if (dest == null)
+            throw new RuntimeException("File dest is null");
         if (pageStamp == 0)
             throw new RuntimeException("Pdf page cannot be zero");
-        checkPdf(src, passPdf);
         byte[] bytes = IOUtils.toByteArray(attach);
         attachWithDest(bytes, (float) signLx, (float) signLy, passPdf, src, dest, pageStamp);
     }
 
-    public static File attachBase64Image(
+    public static void attachImageWithDest(
+            File src,
+            @Nullable File dest,
+            InputStream attach,
+            String passPdf,
+            double signLx,
+            double signLy,
+            int pageStamp) throws IOException, DocumentException {
+
+        if (src == null)
+            throw new RuntimeException("File src is null");
+        if (dest == null)
+            throw new RuntimeException("File dest is null");
+        if (pageStamp == 0)
+            throw new RuntimeException("Pdf page cannot be zero");
+        byte[] bytes = IOUtils.toByteArray(attach);
+        attachWithDest(bytes, (float) signLx, (float) signLy, passPdf, FileUtils.openInputStream(src), dest, pageStamp);
+    }
+
+    public static void attachBase64Image(
             File src,
             String base64Image,
             @Nullable String passPdf,
             double signLx,
             double signLy,
-            int pageStamp) throws IOException, com.itextpdf.text.DocumentException {
+            int pageStamp) throws IOException, DocumentException {
+
 
         if (src == null)
             throw new RuntimeException("File src is null");
+
         if (pageStamp == 0)
             throw new RuntimeException("Pdf page cannot be zero");
 
-        checkPdf(FileUtils.openInputStream(src), passPdf);
         byte[] bytes = Base64.decodeBase64(base64Image.getBytes());
         attach(bytes, (float) signLx, (float) signLy, passPdf, src, pageStamp);
-        return src;
     }
 
     public static void attachBase64ImageWithDest(
@@ -100,16 +119,40 @@ public class PdfUtil {
             @Nullable String passPdf,
             double signLx,
             double signLy,
-            int pageStamp) throws IOException, com.itextpdf.text.DocumentException {
+            int pageStamp) throws IOException, DocumentException {
 
         if (src == null)
             throw new RuntimeException("File src is null");
+        if (dest == null)
+            throw new RuntimeException("File dest is null");
         if (pageStamp == 0)
             throw new RuntimeException("Pdf page cannot be zero");
 
-        checkPdf(src, passPdf);
         byte[] bytes = Base64.decodeBase64(base64Image.getBytes());
         attachWithDest(bytes, (float) signLx, (float) signLy, passPdf, src, dest, pageStamp);
+
+    }
+
+    public static void attachBase64ImageWithDest(
+            File src,
+            File dest,
+            String base64Image,
+            @Nullable String passPdf,
+            double signLx,
+            double signLy,
+            int pageStamp) throws IOException, DocumentException {
+
+        if (src == null)
+            throw new RuntimeException("File src is null");
+        if (dest == null)
+            throw new RuntimeException("File dest is null");
+        if (pageStamp == 0)
+            throw new RuntimeException("Pdf page cannot be zero");
+
+
+        byte[] bytes = Base64.decodeBase64(base64Image.getBytes());
+        attachWithDest(bytes, (float) signLx, (float) signLy, passPdf, FileUtils.openInputStream(src), dest, pageStamp);
+
     }
 
     private static void attach(byte[] bytes,
@@ -124,10 +167,30 @@ public class PdfUtil {
         PdfReader reader;
         if (isNotEmpty(passPdf)) {
             reader = new PdfReader(in, passPdf.getBytes(StandardCharsets.UTF_8));
-        } else {
-            reader = new PdfReader(in);
-        }
+        } else reader = new PdfReader(in);
+        pdfStamper(passPdf, src, pageStamp, image, reader);
+    }
 
+
+    private static void attachWithDest(byte[] bytes,
+                                       float signLx,
+                                       float signLy,
+                                       String passPdf,
+                                       InputStream in,
+                                       File dest,
+                                       int pageStamp) throws IOException, DocumentException {
+        if (dest == null) throw new RuntimeException("File dest is null");
+        Image image = Image.getInstance(bytes);
+        image.setAbsolutePosition(signLx, signLy);
+
+        PdfReader reader;
+        if (isNotBlank(passPdf)) {
+            reader = new PdfReader(in, passPdf.getBytes(StandardCharsets.UTF_8));
+        } else reader = new PdfReader(in);
+        pdfStamper(passPdf, dest, pageStamp, image, reader);
+    }
+
+    private static void pdfStamper(String passPdf, File src, int pageStamp, Image image, PdfReader reader) throws DocumentException, IOException {
         PdfStamper stamper = new PdfStamper(reader, new FileOutputStream(src));
 
         if (isNotEmpty(passPdf)) {
@@ -143,69 +206,4 @@ public class PdfUtil {
         reader.close();
     }
 
-    private static void attachWithDest(byte[] bytes,
-                                       float signLx,
-                                       float signLy,
-                                       String passPdf,
-                                       File src,
-                                       File dest,
-                                       int pageStamp) throws IOException, DocumentException {
-        FileInputStream in = FileUtils.openInputStream(src);
-        Image image = Image.getInstance(bytes);
-        image.setAbsolutePosition(signLx, signLy);
-        PdfReader reader;
-        if (isNotEmpty(passPdf)) {
-            reader = new PdfReader(in, passPdf.getBytes(StandardCharsets.UTF_8));
-        } else {
-            reader = new PdfReader(in);
-        }
-
-        PdfStamper stamper = new PdfStamper(reader, new FileOutputStream(dest));
-
-        if (isNotEmpty(passPdf)) {
-            stamper.setEncryption(passPdf.getBytes(), passPdf.getBytes(), PdfWriter.ALLOW_PRINTING, PdfWriter.ENCRYPTION_AES_128);
-        }
-        PdfImage pdfImage = new PdfImage(image, "", null);
-        pdfImage.put(new PdfName("Signature"), new PdfName("Signature"));
-
-        stamper.getWriter().addToBody(pdfImage);
-        stamper.getOverContent(pageStamp).addImage(image);
-        stamper.close();
-
-        reader.close();
-    }
-
-    private static void attachWithDest(byte[] bytes,
-                                       float signLx,
-                                       float signLy,
-                                       String passPdf,
-                                       InputStream in,
-                                       File dest,
-                                       int pageStamp) throws IOException, DocumentException {
-
-        Image image = Image.getInstance(bytes);
-        image.setAbsolutePosition(signLx, signLy);
-        PdfReader reader;
-        if (isNotEmpty(passPdf)) {
-            reader = new PdfReader(in, passPdf.getBytes(StandardCharsets.UTF_8));
-        } else {
-            reader = new PdfReader(in);
-        }
-        if (dest == null) {
-            throw new RuntimeException("File dest is null");
-        }
-        PdfStamper stamper = new PdfStamper(reader, new FileOutputStream(dest));
-
-        if (isNotEmpty(passPdf)) {
-            stamper.setEncryption(passPdf.getBytes(), passPdf.getBytes(), PdfWriter.ALLOW_PRINTING, PdfWriter.ENCRYPTION_AES_128);
-        }
-        PdfImage pdfImage = new PdfImage(image, "", null);
-        pdfImage.put(new PdfName("Signature"), new PdfName("Signature"));
-
-        stamper.getWriter().addToBody(pdfImage);
-        stamper.getOverContent(pageStamp).addImage(image);
-        stamper.close();
-
-        reader.close();
-    }
 }
