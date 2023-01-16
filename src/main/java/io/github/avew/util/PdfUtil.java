@@ -12,6 +12,7 @@ import org.apache.commons.io.IOUtils;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
@@ -24,6 +25,10 @@ public class PdfUtil {
         if (passDoc != null) {
             try {
                 PdfReader pdfReader = new PdfReader(is, passDoc.getBytes(StandardCharsets.UTF_8));
+                boolean signature = verifySignature(pdfReader);
+                if (signature) {
+                    throw new RuntimeException("Document already Certified, No changes are allowed");
+                }
                 return pdfReader.getNumberOfPages();
             } catch (BadPasswordException ex) {
                 throw new RuntimeException("Password pdf cannot match");
@@ -32,11 +37,22 @@ public class PdfUtil {
             /* check if pdf have a pass */
             try {
                 PdfReader pdfReader = new PdfReader(is);
+                boolean signature = verifySignature(pdfReader);
+                if (signature) {
+                    throw new RuntimeException("Document already Certified, No changes are allowed");
+                }
                 return pdfReader.getNumberOfPages();
             } catch (BadPasswordException e) {
                 throw new RuntimeException("Pdf have a password");
             }
         }
+    }
+
+    public static boolean verifySignature(PdfReader pdfReader) {
+        AcroFields acroFields = pdfReader.getAcroFields();
+        List<String> signatureNames = acroFields.getSignatureNames();
+
+        return !signatureNames.isEmpty();
     }
 
     public static void attachImage(
