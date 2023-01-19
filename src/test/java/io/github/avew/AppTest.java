@@ -12,6 +12,7 @@ import org.junit.Test;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Unit test for simple App.
@@ -39,6 +40,27 @@ public class AppTest {
         boolean verifySignature = PdfUtil.verifySignature(reader);
         System.out.println(verifySignature);
         log.info("'{}' is {}signed", src.getName(), verifySignature ? "" : "NOT ");
+    }
+
+    @Test
+    public void testDocumentWithSignature_ShouldThrowError() {
+        AtomicBoolean t = new AtomicBoolean(false);
+
+        Assert.assertThrows(RuntimeException.class, () -> {
+            File src = new File("src/test/resources/HAVECERT.pdf");
+            PdfUtil.checkPdf(new FileInputStream(src), null, true);
+            log.error("ENDED - INSIDE TEST");
+            t.set(true);
+        });
+
+        if (!t.get()) log.info("ENDED");
+    }
+
+    @Test
+    public void testDocumentWithSignature_ShouldSkipSignatureChecker() throws IOException {
+        File src = new File("src/test/resources/HAVECERT.pdf");
+        PdfUtil.checkPdf(new FileInputStream(src), null, false);
+        log.info("ENDED");
     }
 
     @Test
