@@ -13,6 +13,7 @@ import org.apache.commons.io.IOUtils;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.function.Supplier;
 
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
@@ -21,13 +22,25 @@ import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 public class PdfUtil {
 
     public static int checkPdf(InputStream is, String passDoc) throws IOException {
+        return checkPdf(is, passDoc, true);
+    }
+
+    public static int checkPdf(InputStream is, String passDoc, boolean verifySignature) throws IOException {
+        return checkPdf(is, passDoc, () -> verifySignature);
+    }
+
+    public static int checkPdf(InputStream is, String passDoc, Supplier<Boolean> verifySignature) throws IOException {
         /* check if doc have a pass */
+
+        boolean shouldVerifySignature = verifySignature.get();
         if (passDoc != null) {
             try {
                 PdfReader pdfReader = new PdfReader(is, passDoc.getBytes(StandardCharsets.UTF_8));
-                boolean signature = verifySignature(pdfReader);
-                if (signature) {
-                    throw new RuntimeException("Document already Certified, No changes are allowed");
+                if (shouldVerifySignature) {
+                    boolean signature = verifySignature(pdfReader);
+                    if (signature) {
+                        throw new RuntimeException("Document already Certified, No changes are allowed");
+                    }
                 }
                 return pdfReader.getNumberOfPages();
             } catch (BadPasswordException ex) {
@@ -37,9 +50,10 @@ public class PdfUtil {
             /* check if pdf have a pass */
             try {
                 PdfReader pdfReader = new PdfReader(is);
-                boolean signature = verifySignature(pdfReader);
-                if (signature) {
-                    throw new RuntimeException("Document already Certified, No changes are allowed");
+
+                if (shouldVerifySignature) {
+                    boolean signature = verifySignature(pdfReader);
+                    if (signature) throw new RuntimeException("Document already Certified, No changes are allowed");
                 }
                 return pdfReader.getNumberOfPages();
             } catch (BadPasswordException e) {
