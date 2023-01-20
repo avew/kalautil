@@ -2,17 +2,26 @@ package io.github.avew;
 
 import com.itextpdf.text.DocumentException;
 import com.itextpdf.text.pdf.PdfReader;
+import io.github.avew.generator.JettExcelTemplate;
 import io.github.avew.util.PdfUtil;
 import io.github.avew.util.RupiahUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
+import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  * Unit test for simple App.
@@ -121,6 +130,38 @@ public class AppTest {
         File src = new File("src/test/resources/SAMPLE.pdf");
         File dest = new File("src/test/resources/OUTPUT.pdf");
         PdfUtil.attachBase64ImageWithDest(src, dest, BASE_64_IMAGE, null, LX, LY, 1);
+    }
+
+    @Test
+    public void testJettExcelTemplate() throws IOException, InvalidFormatException {
+        try (JettExcelTemplate template = new JettExcelTemplate("src/test/resources/EMET_REPORT.xls")) {
+            Map<String, Object> bean = new TreeMap<>();
+            bean.put("docs", IntStream.range(0, 100)
+                    .boxed()
+                    .map(index -> {
+                        Map<String, Object> doc = new TreeMap<>();
+                        boolean asFail = Math.floor(Math.random() * 3 + 1) <= 1;
+
+                        doc.put("name", "INI DOKUMEN.pdf");
+                        doc.put("status", asFail ? "FAILED" : "COMPLETE");
+                        doc.put("message", "berhasil kok");
+                        doc.put("noDoc", "KJDHD-88917");
+                        doc.put("typeDoc", "Surat Pernyataan");
+                        doc.put("dateDoc", "2023-01-01");
+                        doc.put("qrSn", "AKS38H945B19UB239N09JM209B3Y81V2VT");
+                        doc.put("checksum", " nbyi8v8&By8vV*&bv7tc^vuiojvy7y2Pmm8b73r2y8vb9of23f283b");
+                        doc.put("createdBy", "system");
+                        doc.put("createdDate", DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+                                .format(LocalDateTime.now()));
+
+                        return doc;
+                    })
+                    .collect(Collectors.toList())
+            );
+
+            template.addBean(bean);
+            template.write(new File("D:/TMP/emet-util/report-test.xls"));
+        }
     }
 
 
