@@ -164,5 +164,45 @@ public class AppTest {
         }
     }
 
+    @Test
+    public void testJettExcelTemplateCloneSheet() throws IOException, InvalidFormatException {
+        try (JettExcelTemplate template = new JettExcelTemplate("src/test/resources/EMET_REPORT.xls")) {
+
+            IntStream.range(0, 3)
+                    .boxed()
+                    .forEach(index -> {
+
+                        Map<String, Object> bean = new TreeMap<>();
+                        bean.put("docs", IntStream.range(0, 100)
+                                .boxed()
+                                .map(subindex -> {
+                                    Map<String, Object> doc = new TreeMap<>();
+                                    boolean asFail = Math.floor(Math.random() * 3 + 1) <= 1;
+
+                                    doc.put("name", "INI DOKUMEN.pdf");
+                                    doc.put("status", asFail ? "FAILED" : "COMPLETE");
+                                    doc.put("message", "berhasil kok");
+                                    doc.put("noDoc", "KJDHD-88917");
+                                    doc.put("typeDoc", "Surat Pernyataan");
+                                    doc.put("dateDoc", "2023-01-01");
+                                    doc.put("qrSn", "AKS38H945B19UB239N09JM209B3Y81V2VT");
+                                    doc.put("checksum", " nbyi8v8&By8vV*&bv7tc^vuiojvy7y2Pmm8b73r2y8vb9of23f283b");
+                                    doc.put("createdBy", "system");
+                                    doc.put("createdDate", DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+                                            .format(LocalDateTime.now()));
+
+                                    return doc;
+                                })
+                                .collect(Collectors.toList())
+                        );
+
+
+                        template.cloneSheet("template", "Ini Sheet " + index, bean);
+                    });
+
+            template.write(new File("D:/TMP/emet-util/report-test.xls"));
+        }
+    }
+
 
 }
