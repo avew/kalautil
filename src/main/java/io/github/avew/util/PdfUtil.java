@@ -5,6 +5,7 @@ import com.itextpdf.text.Image;
 import com.itextpdf.text.exceptions.BadPasswordException;
 import com.itextpdf.text.pdf.*;
 import com.sun.istack.Nullable;
+import io.github.avew.config.PdfKalaException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.io.FileUtils;
@@ -39,12 +40,12 @@ public class PdfUtil {
                 if (shouldVerifySignature) {
                     boolean signature = verifySignature(pdfReader);
                     if (signature) {
-                        throw new RuntimeException("Document already Certified, No changes are allowed");
+                        throw new PdfKalaException("Document already Certified, No changes are allowed");
                     }
                 }
                 return pdfReader.getNumberOfPages();
             } catch (BadPasswordException ex) {
-                throw new RuntimeException("Password pdf cannot match");
+                throw new PdfKalaException("Password pdf cannot match");
             }
         } else {
             /* check if pdf have a pass */
@@ -53,11 +54,11 @@ public class PdfUtil {
 
                 if (shouldVerifySignature) {
                     boolean signature = verifySignature(pdfReader);
-                    if (signature) throw new RuntimeException("Document already Certified, No changes are allowed");
+                    if (signature) throw new PdfKalaException("Document already Certified, No changes are allowed");
                 }
                 return pdfReader.getNumberOfPages();
             } catch (BadPasswordException e) {
-                throw new RuntimeException("Pdf have a password");
+                throw new PdfKalaException("Pdf have a password");
             }
         }
     }

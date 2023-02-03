@@ -2,6 +2,7 @@ package io.github.avew;
 
 import com.itextpdf.text.DocumentException;
 import com.itextpdf.text.pdf.PdfReader;
+import io.github.avew.config.PdfKalaException;
 import io.github.avew.util.PdfUtil;
 import io.github.avew.util.RupiahUtil;
 import lombok.extern.slf4j.Slf4j;
@@ -46,7 +47,7 @@ public class AppTest {
     public void testDocumentWithSignature_ShouldThrowError() {
         AtomicBoolean t = new AtomicBoolean(false);
 
-        Assert.assertThrows(RuntimeException.class, () -> {
+        Assert.assertThrows(PdfKalaException.class, () -> {
             File src = new File("src/test/resources/HAVECERT.pdf");
             PdfUtil.checkPdf(new FileInputStream(src), null, true);
             log.error("ENDED - INSIDE TEST");
