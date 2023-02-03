@@ -20,7 +20,7 @@ public class JettExcelTemplate implements Closeable {
 
     final ExcelTransformer transformer = new ExcelTransformer();
     final Workbook workbook;
-    final FileInputStream templateStream;
+    final InputStream templateStream;
 
     final List<String> sourceSheetNames = new ArrayList<>();
     final List<SheetSource> targetSheetNames = new ArrayList<>();
@@ -34,7 +34,11 @@ public class JettExcelTemplate implements Closeable {
     }
 
     public JettExcelTemplate(File template) throws IOException, InvalidFormatException {
-        this.templateStream = new FileInputStream(template);
+        this(new FileInputStream(template));
+    }
+
+    public JettExcelTemplate(InputStream inputStream) throws IOException, InvalidFormatException {
+        this.templateStream = inputStream;
         this.workbook = WorkbookFactory.create(templateStream);
         workbook.sheetIterator().forEachRemaining(sheet -> {
             sourceSheetNames.add(sheet.getSheetName());
